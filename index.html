@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <form id="form-container">
+      <input type="text" id="name-input" placeholder="name" />
+      <input type="text" id="email-input" placeholder="email" />
+    </form>
+    <button id="save-btn" type="submit">save</button>
+    <button id="create-btn" type="submit">create</button>
+    <table>
+      <thead>
+        <tr>
+          <td>ID</td>
+          <td>Name</td>
+          <td>Email</td>
+          <td>Actions</td>
+        </tr>
+      </thead>
+      <tbody id="users-table"></tbody>
+    </table>
+    <script>
+      const usersTable = document.getElementById('users-table');
+      const formContainer = document.getElementById('form-container');
+      const nameInput = document.getElementById('name-input');
+      const emailInput = document.getElementById('email-input');
+      const saveBtn = document.getElementById('save-btn');
+      const cancelBtn = document.getElementById('cancel-btn');
+      const createBtn = document.getElementById('create-btn');
+      let users = [];
+      let editingUser = null;
+
+      function fetchUsers() {
+        fetch('https://jsonplaceholder.typicode.com/users')
+          .then(res => res.json())
+          .then(data => {
+            users = data;
+            renderUsers();
+          });
+      }
+
+      function renderUsers() {
+        usersTable.innerHTML = '';
+        users.forEach(user => {
+          const row = document.createElement('tr');
+          row.innerHTML = `<td>${user.id}</td> <td>${user.name}</td> <td>${user.email}</td> <td> <button class="edit-btn" data-id="${user.id}">Edit</button> <button class="delete-btn" data-id="${user.id}">Delete</button> </td>`;
+          usersTable.appendChild(row);
+        });
+
+        const editBtns = document.querySelectorAll('.edit-btn');
+        editBtns.forEach(btn => {
+          btn.addEventListener('click', editUser);
+        });
+
+        const deleteBtns = document.querySelectorAll('.delete-btn');
+        deleteBtns.forEach(btn => {
+          btn.addEventListener('click', deleteUser);
+        });
+      }
+
+      function createUser() {
+        formContainer.style.display = 'block';
+        editingUser = null;
+      }
+
+      function saveUser() {
+        const name = nameInput.value;
+        const email = emailInput.value;
+        const data = { name, email };
+
+        if (editingUser) {
+          fetch(
+            `https://jsonplaceholder.typicode.com/users/${editingUser.id}`,
+            {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(data),
+            }
+          )
+            .then(res => res.json())
+            .then(updatedUser => {
+              const index = users.findIndex(u => u.id === updatedUser.id);
+              users[index] = updatedUser;
+              renderUsers();
+              cancelForm();
+            });
+        } else {
+          fetch(`https://jsonplaceholder.typicode.com/users`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data),
+          })
+            .then(res => res.json())
+            .then(newUser => {
+              users.push(newUser);
+              renderUsers();
+              cancelForm();
+            });
+        }
+      }
+
+      function editUser(e) {
+        const id = e.target.dataset.id;
+        editingUser = users.find(u => u.id == id);
+        nameInput.value = editingUser.name;
+        emailInput.value = editingUser.email;
+        formContainer.style.display = 'block';
+      }
+
+      function deleteUser(e) {
+        const id = e.target.dataset.id;
+        fetch(`https://jsonplaceholder.typicode.com/users/${id}`, {
+          method: 'DELETE',
+        }).then(() => {
+          users = users.filter(u => u.id != id);
+          renderUsers();
+        });
+      }
+
+      function cancelForm() {
+        nameInput.value = '';
+        emailInput.value = '';
+        formContainer.style.display = 'none';
+        editingUser = null;
+      }
+
+      createBtn.addEventListener('click', createUser);
+      saveBtn.addEventListener('click', saveUser);
+      //   cancelBtn.addEventListener('click', cancelForm);
+
+      fetchUsers();
+    </script>
+  </body>
+</html>
